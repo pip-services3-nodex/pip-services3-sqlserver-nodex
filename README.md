@@ -99,7 +99,7 @@ export class MySqlServerPersistence extends IdentifableSqlServerPersistence {
   public getOneByKey(correlationId: string, key: string,
     callback: (err: any, item: MyObject) => void): void {
     
-    let query = "SELECT * FROM " + this.quoteIdentifier(this._tableName) + " WHERE [key]=@1";
+    let query = "SELECT * FROM " + this.quotedTableName() + " WHERE [key]=@1";
     let params = [ key ];
 
     let request = this.createRequest(params);
@@ -166,7 +166,7 @@ export class MySqlServerPersistence extends IdentifableJsonSqlServerPersistence 
   public getOneByKey(correlationId: string, key: string,
     callback: (err: any, item: MyObject) => void): void {
     
-    let query = "SELECT * FROM " + this.quoteIdentifier(this._tableName) + " WHERE JSON_VALUE([data],'$.key')=@1";
+    let query = "SELECT * FROM " + this.quotedTableName() + " WHERE JSON_VALUE([data],'$.key')=@1";
     let params = [ key ];
 
     let request = this.createRequest(params);

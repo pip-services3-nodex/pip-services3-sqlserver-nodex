@@ -23,7 +23,8 @@ import { SqlServerPersistence } from './SqlServerPersistence';
 
  * ### Configuration parameters ###
  * 
- * - collection:                  (optional) SQLServer collection name
+ * - table:                       (optional) SQLServer table name
+ * - schema:                       (optional) SQLServer table name
  * - connection(s):    
  *   - discovery_key:             (optional) a key to retrieve the connection from [[https://pip-services3-nodex.github.io/pip-services3-components-nodex/interfaces/connect.idiscovery.html IDiscovery]]
  *   - host:                      host name or IP address
@@ -93,14 +94,11 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
     /**
      * Creates a new instance of the persistence component.
      * 
-     * @param collection    (optional) a collection name.
+     * @param tableName    (optional) a table name.
+     * @param schemaName    (optional) a schema name.
      */
-    public constructor(tableName: string) {
-        super(tableName);
-
-        if (tableName == null) {
-            throw new Error("Table name could not be null");
-        }
+    public constructor(tableName: string, schemaName?: string) {
+        super(tableName, schemaName);
     }
 
     /** 
@@ -122,7 +120,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
      */
     public async getListByIds(correlationId: string, ids: K[]): Promise<T[]> {
         let params = this.generateParameters(ids);
-        let query = "SELECT * FROM " + this.quoteIdentifier(this._tableName) + " WHERE [id] IN(" + params + ")";
+        let query = "SELECT * FROM " + this.quotedTableName() + " WHERE [id] IN(" + params + ")";
 
         let request = this.createRequest(ids);
         let items = await new Promise<any[]>((resolve, reject) => {
@@ -150,7 +148,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
      * @returns the requested data item or <code>null</code> if nothing was found.
      */
     public async getOneById(correlationId: string, id: K): Promise<T> {
-        let query = "SELECT * FROM " + this.quoteIdentifier(this._tableName) + " WHERE [id]=@1";
+        let query = "SELECT * FROM " + this.quotedTableName() + " WHERE [id]=@1";
         let params = [ id ];
 
         let request = this.createRequest(params);
@@ -223,7 +221,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
         let values = this.generateValues(row);
         values.push(item.id);
 
-        let query = "INSERT INTO " + this.quoteIdentifier(this._tableName) + " (" + columns + ") OUTPUT INSERTED.* VALUES (" + params + ")";
+        let query = "INSERT INTO " + this.quotedTableName() + " (" + columns + ") OUTPUT INSERTED.* VALUES (" + params + ")";
 
         let request = this.createRequest(values);
         let newItem = await new Promise<any>((resolve, reject) => {
@@ -251,7 +249,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
         }
 
         values.push(item.id);
-        query = "UPDATE " + this.quoteIdentifier(this._tableName) + " SET " + setParams + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
+        query = "UPDATE " + this.quotedTableName() + " SET " + setParams + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
 
         request = this.createRequest(values);
         newItem = await new Promise<any>((resolve, reject) => {
@@ -290,7 +288,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
         let values = this.generateValues(row);
         values.push(item.id);
 
-        let query = "UPDATE " + this.quoteIdentifier(this._tableName)
+        let query = "UPDATE " + this.quotedTableName()
             + " SET " + params + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
 
         let request = this.createRequest(values);
@@ -330,7 +328,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
         let values = this.generateValues(row);
         values.push(id);
 
-        let query = "UPDATE " + this.quoteIdentifier(this._tableName)
+        let query = "UPDATE " + this.quotedTableName()
             + " SET " + params + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
 
         let request = this.createRequest(values);
@@ -362,7 +360,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
     public async deleteById(correlationId: string, id: K): Promise<T> {
         let values = [ id ];
 
-        let query = "DELETE FROM " + this.quoteIdentifier(this._tableName) + " OUTPUT DELETED.* WHERE [id]=@1";
+        let query = "DELETE FROM " + this.quotedTableName() + " OUTPUT DELETED.* WHERE [id]=@1";
 
         let request = this.createRequest(values);
         let oldItem = await new Promise<any>((resolve, reject) => {
@@ -391,7 +389,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
      */
     public async deleteByIds(correlationId: string, ids: K[]): Promise<void> {
         let params = this.generateParameters(ids);
-        let query = "DELETE FROM " + this.quoteIdentifier(this._tableName) + " WHERE \"id\" IN(" + params + ")";
+        let query = "DELETE FROM " + this.quotedTableName() + " WHERE \"id\" IN(" + params + ")";
 
         let request = this.createRequest(ids);
         let count = await new Promise<number>((resolve, reject) => {

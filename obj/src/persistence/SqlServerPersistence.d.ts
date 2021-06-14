@@ -21,7 +21,8 @@ import { SqlServerConnection } from '../connect/SqlServerConnection';
  *
  * ### Configuration parameters ###
  *
- * - collection:                  (optional) SQLServer collection name
+ * - table:                       (optional) SQLServer table name
+ * - schema:                       (optional) SQLServer table name
  * - connection(s):
  *   - discovery_key:             (optional) a key to retrieve the connection from [[https://pip-services3-nodex.github.io/pip-services3-components-nodex/interfaces/connect.idiscovery.html IDiscovery]]
  *   - host:                      host name or IP address
@@ -114,13 +115,21 @@ export declare class SqlServerPersistence<T> implements IReferenceable, IUnrefer
      * The SQLServer table object.
      */
     protected _tableName: string;
+    /**
+     * The SQLServer schema object.
+     */
+    protected _schemaName: string;
+    /**
+     * The maximum number of objects in data pages
+     */
     protected _maxPageSize: number;
     /**
      * Creates a new instance of the persistence component.
      *
      * @param tableName    (optional) a table name.
+     * @param schemaName    (optional) a schema name.
      */
-    constructor(tableName?: string);
+    constructor(tableName?: string, schemaName?: string);
     /**
      * Configures component by passing configuration parameters.
      *
@@ -144,12 +153,6 @@ export declare class SqlServerPersistence<T> implements IReferenceable, IUnrefer
      * @param options index options
      */
     protected ensureIndex(name: string, keys: any, options?: any): void;
-    /**
-     * Adds a statement to schema definition.
-     * This is a deprecated method. Use ensureSchema instead.
-     * @param schemaStatement a statement to be added to the schema
-     */
-    protected autoCreateObject(schemaStatement: string): void;
     /**
      * Adds a statement to schema definition
      * @param schemaStatement a statement to be added to the schema
@@ -178,6 +181,7 @@ export declare class SqlServerPersistence<T> implements IReferenceable, IUnrefer
      */
     protected convertFromPublic(value: any): any;
     protected quoteIdentifier(value: string): string;
+    protected quotedTableName(): string;
     /**
      * Checks if the component is opened.
      *

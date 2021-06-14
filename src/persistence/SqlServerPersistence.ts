@@ -26,7 +26,8 @@ import { SqlServerConnection } from '../connect/SqlServerConnection';
  * 
  * ### Configuration parameters ###
  * 
- * - collection:                  (optional) SQLServer collection name
+ * - table:                       (optional) SQLServer table name
+ * - schema:                       (optional) SQLServer table name
  * - connection(s):    
  *   - discovery_key:             (optional) a key to retrieve the connection from [[https://pip-services3-nodex.github.io/pip-services3-components-nodex/interfaces/connect.idiscovery.html IDiscovery]]
  *   - host:                      host name or IP address
@@ -87,7 +88,8 @@ import { SqlServerConnection } from '../connect/SqlServerConnection';
 export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable, IConfigurable, IOpenable, ICleanable {
 
     private static _defaultConfig: ConfigParams = ConfigParams.fromTuples(
-        "collection", null,
+        "table", null,
+        "schema", null,
         "dependencies.connection", "*:connection:sqlserver:*:1.0",
 
         // connections.*
@@ -137,17 +139,24 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
      * The SQLServer table object.
      */
     protected _tableName: string;
-
-
+    /**
+     * The SQLServer schema object.
+     */
+    protected _schemaName: string;
+    /**
+     * The maximum number of objects in data pages
+     */
     protected _maxPageSize: number = 100;
 
     /**
      * Creates a new instance of the persistence component.
      * 
      * @param tableName    (optional) a table name.
+     * @param schemaName    (optional) a schema name.
      */
-    public constructor(tableName?: string) {
+    public constructor(tableName?: string, schemaName?: string) {
         this._tableName = tableName;
+        this._schemaName = schemaName;
     }
 
     /**
@@ -163,6 +172,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
 
         this._tableName = config.getAsStringWithDefault("collection", this._tableName);
         this._tableName = config.getAsStringWithDefault("table", this._tableName);
+        this._schemaName = config.getAsStringWithDefault("schema", this._schemaName);
         this._maxPageSize = config.getAsIntegerWithDefault("options.max_page_size", this._maxPageSize);
     }
 
@@ -221,7 +231,12 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
             builder += " UNIQUE";
         }
         
-        builder += " INDEX " + name + " ON " + this.quoteIdentifier(this._tableName);
+        let indexName = this.quoteIdentifier(name);
+        if (this._schemaName != null) {
+            indexName = this.quoteIdentifier(this._schemaName) + "." + indexName;
+        }
+
+        builder += " INDEX " + indexName + " ON " + this.quotedTableName();
 
         if (options.type) {
             builder += " " + options.type;
@@ -238,15 +253,6 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
         builder += "(" + fields + ")";
 
         this.ensureSchema(builder);       
-    }
-
-    /**
-     * Adds a statement to schema definition.
-     * This is a deprecated method. Use ensureSchema instead.
-     * @param schemaStatement a statement to be added to the schema
-     */
-    protected autoCreateObject(schemaStatement: string): void {
-        this.ensureSchema(schemaStatement);
     }
 
     /**
@@ -298,6 +304,18 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
         if (value[0] == '[') return value;
 
         return '[' + value.replace(".", "].[") + ']';
+    }
+
+    protected quotedTableName(): string {
+        if (this._tableName == null) {
+            return null;
+        }
+
+        let builder = this.quoteIdentifier(this._tableName);
+        if (this._schemaName != null) {
+            builder = this.quoteIdentifier(this._schemaName) + "." + builder;
+        }
+        return builder;
     }
 
     /**
@@ -388,7 +406,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
             throw new Error('Table name is not defined');
         }
 
-        let query = "DELETE FROM " + this.quoteIdentifier(this._tableName);
+        let query = "DELETE FROM " + this.quotedTableName();
 
         return new Promise<void>((resolve, reject) => {
             this._client.query(query, (err, result) => {
@@ -407,6 +425,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
         }
     
         // Check if table exist to determine weither to auto create objects
+        // Todo: Adde support for schema
         let query = "SELECT OBJECT_ID('" + this._tableName + "', 'U') as oid";
 
         let exists = await new Promise<boolean>((resolve, reject) => {
@@ -536,7 +555,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
         sort: any, select: any): Promise<DataPage<T>> {
         
         select = select != null ? select : "*"
-        let query = "SELECT " + select + " FROM " + this.quoteIdentifier(this._tableName);
+        let query = "SELECT " + select + " FROM " + this.quotedTableName();
 
         // Adjust max item count based on configuration
         paging = paging || new PagingParams();
@@ -576,7 +595,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
         items = items.map(this.convertToPublic);
 
         if (pagingEnabled) {
-            let query = 'SELECT COUNT(*) AS count FROM ' + this.quoteIdentifier(this._tableName);
+            let query = 'SELECT COUNT(*) AS count FROM ' + this.quotedTableName();
             if (filter != null) {
                 query += " WHERE " + filter;
             }
@@ -612,7 +631,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
      * @returns a number of items that satisfy the filter.
      */
     protected async getCountByFilter(correlationId: string, filter: any): Promise<number> {
-        let query = 'SELECT COUNT(*) AS count FROM ' + this.quoteIdentifier(this._tableName);
+        let query = 'SELECT COUNT(*) AS count FROM ' + this.quotedTableName();
         if (filter != null) {
             query += " WHERE " + filter;
         }
@@ -652,7 +671,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
      */
     protected async getListByFilter(correlationId: string, filter: any, sort: any, select: any): Promise<T[]> {    
         select = select != null ? select : "*"
-        let query = "SELECT " + select + " FROM " + this.quoteIdentifier(this._tableName);
+        let query = "SELECT " + select + " FROM " + this.quotedTableName();
 
         if (filter != null) {
             query += " WHERE " + filter;
@@ -693,7 +712,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
      * @returns a random item that satisfies the filter.
      */
     protected async getOneRandom(correlationId: string, filter: any): Promise<T> {
-        let query = 'SELECT COUNT(*) AS count FROM ' + this.quoteIdentifier(this._tableName);
+        let query = 'SELECT COUNT(*) AS count FROM ' + this.quotedTableName();
         if (filter != null) {
             query += " WHERE " + filter;
         }
@@ -714,7 +733,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
             return null;
         }
 
-        query = "SELECT * FROM " + this.quoteIdentifier(this._tableName);
+        query = "SELECT * FROM " + this.quotedTableName();
     
         if (filter != null) {
             query += " WHERE " + filter;
@@ -762,7 +781,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
         let params = this.generateParameters(row);
         let values = this.generateValues(row);
 
-        let query = "INSERT INTO " + this.quoteIdentifier(this._tableName) + " (" + columns + ") OUTPUT INSERTED.* VALUES (" + params + ")";
+        let query = "INSERT INTO " + this.quotedTableName() + " (" + columns + ") OUTPUT INSERTED.* VALUES (" + params + ")";
 
         let request = this.createRequest(values);
         let newItem = await new Promise<any>((resolve, reject) => {
@@ -793,7 +812,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
      * @param filter            (optional) a filter JSON object.
      */
     public async deleteByFilter(correlationId: string, filter: string): Promise<void> {
-        let query = "DELETE FROM " + this.quoteIdentifier(this._tableName);
+        let query = "DELETE FROM " + this.quotedTableName();
         if (filter != null) {
             query += " WHERE " + filter;
         }

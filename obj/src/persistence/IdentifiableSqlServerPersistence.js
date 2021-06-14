@@ -26,7 +26,8 @@ const SqlServerPersistence_1 = require("./SqlServerPersistence");
 
  * ### Configuration parameters ###
  *
- * - collection:                  (optional) SQLServer collection name
+ * - table:                       (optional) SQLServer table name
+ * - schema:                       (optional) SQLServer table name
  * - connection(s):
  *   - discovery_key:             (optional) a key to retrieve the connection from [[https://pip-services3-nodex.github.io/pip-services3-components-nodex/interfaces/connect.idiscovery.html IDiscovery]]
  *   - host:                      host name or IP address
@@ -94,13 +95,11 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
     /**
      * Creates a new instance of the persistence component.
      *
-     * @param collection    (optional) a collection name.
+     * @param tableName    (optional) a table name.
+     * @param schemaName    (optional) a schema name.
      */
-    constructor(tableName) {
-        super(tableName);
-        if (tableName == null) {
-            throw new Error("Table name could not be null");
-        }
+    constructor(tableName, schemaName) {
+        super(tableName, schemaName);
     }
     /**
      * Converts the given object from the public partial format.
@@ -121,7 +120,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
     getListByIds(correlationId, ids) {
         return __awaiter(this, void 0, void 0, function* () {
             let params = this.generateParameters(ids);
-            let query = "SELECT * FROM " + this.quoteIdentifier(this._tableName) + " WHERE [id] IN(" + params + ")";
+            let query = "SELECT * FROM " + this.quotedTableName() + " WHERE [id] IN(" + params + ")";
             let request = this.createRequest(ids);
             let items = yield new Promise((resolve, reject) => {
                 request.query(query, (err, result) => {
@@ -147,7 +146,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
      */
     getOneById(correlationId, id) {
         return __awaiter(this, void 0, void 0, function* () {
-            let query = "SELECT * FROM " + this.quoteIdentifier(this._tableName) + " WHERE [id]=@1";
+            let query = "SELECT * FROM " + this.quotedTableName() + " WHERE [id]=@1";
             let params = [id];
             let request = this.createRequest(params);
             let item = yield new Promise((resolve, reject) => {
@@ -213,7 +212,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
             let setParams = this.generateSetParameters(row);
             let values = this.generateValues(row);
             values.push(item.id);
-            let query = "INSERT INTO " + this.quoteIdentifier(this._tableName) + " (" + columns + ") OUTPUT INSERTED.* VALUES (" + params + ")";
+            let query = "INSERT INTO " + this.quotedTableName() + " (" + columns + ") OUTPUT INSERTED.* VALUES (" + params + ")";
             let request = this.createRequest(values);
             let newItem = yield new Promise((resolve, reject) => {
                 request.query(query, (err, result) => {
@@ -237,7 +236,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
                 return newItem;
             }
             values.push(item.id);
-            query = "UPDATE " + this.quoteIdentifier(this._tableName) + " SET " + setParams + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
+            query = "UPDATE " + this.quotedTableName() + " SET " + setParams + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
             request = this.createRequest(values);
             newItem = yield new Promise((resolve, reject) => {
                 request.query(query, (err, result) => {
@@ -271,7 +270,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
             let params = this.generateSetParameters(row);
             let values = this.generateValues(row);
             values.push(item.id);
-            let query = "UPDATE " + this.quoteIdentifier(this._tableName)
+            let query = "UPDATE " + this.quotedTableName()
                 + " SET " + params + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
             let request = this.createRequest(values);
             let newItem = yield new Promise((resolve, reject) => {
@@ -307,7 +306,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
             let params = this.generateSetParameters(row);
             let values = this.generateValues(row);
             values.push(id);
-            let query = "UPDATE " + this.quoteIdentifier(this._tableName)
+            let query = "UPDATE " + this.quotedTableName()
                 + " SET " + params + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
             let request = this.createRequest(values);
             let newItem = yield new Promise((resolve, reject) => {
@@ -336,7 +335,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
     deleteById(correlationId, id) {
         return __awaiter(this, void 0, void 0, function* () {
             let values = [id];
-            let query = "DELETE FROM " + this.quoteIdentifier(this._tableName) + " OUTPUT DELETED.* WHERE [id]=@1";
+            let query = "DELETE FROM " + this.quotedTableName() + " OUTPUT DELETED.* WHERE [id]=@1";
             let request = this.createRequest(values);
             let oldItem = yield new Promise((resolve, reject) => {
                 request.query(query, (err, result) => {
@@ -363,7 +362,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
     deleteByIds(correlationId, ids) {
         return __awaiter(this, void 0, void 0, function* () {
             let params = this.generateParameters(ids);
-            let query = "DELETE FROM " + this.quoteIdentifier(this._tableName) + " WHERE \"id\" IN(" + params + ")";
+            let query = "DELETE FROM " + this.quotedTableName() + " WHERE \"id\" IN(" + params + ")";
             let request = this.createRequest(ids);
             let count = yield new Promise((resolve, reject) => {
                 request.query(query, (err, result) => {

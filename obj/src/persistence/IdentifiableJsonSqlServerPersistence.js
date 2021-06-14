@@ -27,7 +27,8 @@ const IdentifiableSqlServerPersistence_1 = require("./IdentifiableSqlServerPersi
 
  * ### Configuration parameters ###
  *
- * - collection:                  (optional) SQLServer collection name
+ * - table:                       (optional) SQLServer table name
+ * - schema:                       (optional) SQLServer table name
  * - connection(s):
  *   - discovery_key:             (optional) a key to retrieve the connection from [[https://pip-services3-nodex.github.io/pip-services3-components-nodex/interfaces/connect.idiscovery.html IDiscovery]]
  *   - host:                      host name or IP address
@@ -94,10 +95,11 @@ class IdentifiableJsonSqlServerPersistence extends IdentifiableSqlServerPersiste
     /**
      * Creates a new instance of the persistence component.
      *
-     * @param collection    (optional) a collection name.
+     * @param tableName    (optional) a table name.
+     * @param schemaName    (optional) a schema name.
      */
-    constructor(tableName) {
-        super(tableName);
+    constructor(tableName, schemaName) {
+        super(tableName, schemaName);
     }
     /**
      * Adds DML statement to automatically create JSON(B) table
@@ -106,7 +108,13 @@ class IdentifiableJsonSqlServerPersistence extends IdentifiableSqlServerPersiste
      * @param dataType type of the data column (default: JSONB)
      */
     ensureTable(idType = 'VARCHAR(32)', dataType = 'NVARCHAR(MAX)') {
-        let query = "CREATE TABLE " + this.quoteIdentifier(this._tableName)
+        if (this._schemaName != null) {
+            let query = "IF NOT EXISTS (SELECT * FROM [sys].[schemas] WHERE [name]=N'"
+                + this._schemaName + "') EXEC('CREATE SCHEMA "
+                + this.quoteIdentifier(this._schemaName) + "')";
+            this.ensureSchema(query);
+        }
+        let query = "CREATE TABLE " + this.quotedTableName()
             + " ([id] " + idType + " PRIMARY KEY, [data] " + dataType + ")";
         this.ensureSchema(query);
     }
@@ -167,7 +175,7 @@ class IdentifiableJsonSqlServerPersistence extends IdentifiableSqlServerPersiste
                 set = "JSON_MODIFY(" + set + ",'$." + column + "',@" + index + ")";
             }
             values.push(id);
-            let query = "UPDATE " + this.quoteIdentifier(this._tableName) + " SET [data]=" + set + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
+            let query = "UPDATE " + this.quotedTableName() + " SET [data]=" + set + " OUTPUT INSERTED.* WHERE [id]=@" + values.length;
             let request = this.createRequest(values);
             let newItem = yield new Promise((resolve, reject) => {
                 request.query(query, (err, result) => {
