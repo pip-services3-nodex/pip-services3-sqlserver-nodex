@@ -5,7 +5,8 @@
 Added support for SQL schemas
 
 ### Features
-* Added schemas to SqlServerPertsistence, IdentifiableSqlServerPersistence, IdentifiableJsonSqlServerPersistence
+* Added schemas to SqlServerPersistence, IdentifiableSqlServerPersistence, IdentifiableJsonSqlServerPersistence
+* Added _autoGenerateId flag to IdentifiableSqlServerPersistence
 
 ## <a name="1.0.0"></a> 1.0.0 (2021-05-28)
 

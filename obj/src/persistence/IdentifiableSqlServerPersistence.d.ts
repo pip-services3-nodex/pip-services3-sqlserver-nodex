@@ -86,6 +86,10 @@ import { SqlServerPersistence } from './SqlServerPersistence';
  */
 export declare class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> extends SqlServerPersistence<T> implements IWriter<T, K>, IGetter<T, K>, ISetter<T> {
     /**
+     * Flag to turn on automated string ID generation
+     */
+    protected _autoGenerateId: boolean;
+    /**
      * Creates a new instance of the persistence component.
      *
      * @param tableName    (optional) a table name.

@@ -90,6 +90,10 @@ import { SqlServerPersistence } from './SqlServerPersistence';
  */
 export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> extends SqlServerPersistence<T>
     implements IWriter<T, K>, IGetter<T, K>, ISetter<T> {
+    /**
+     * Flag to turn on automated string ID generation
+     */
+    protected _autoGenerateId: boolean = true;
 
     /**
      * Creates a new instance of the persistence component.
@@ -187,7 +191,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
 
         // Assign unique id
         let newItem: any = item;
-        if (newItem.id == null) {
+        if (newItem.id == null && this._autoGenerateId) {
             newItem = Object.assign({}, newItem);
             newItem.id = item.id || IdGenerator.nextLong();
         }
@@ -209,7 +213,7 @@ export class IdentifiableSqlServerPersistence<T extends IIdentifiable<K>, K> ext
         }
 
         // Assign unique id
-        if (item.id == null) {
+        if (item.id == null && this._autoGenerateId) {
             item = Object.assign({}, item);
             item.id = <any>IdGenerator.nextLong();
         }
