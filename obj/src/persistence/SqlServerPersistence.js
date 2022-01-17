@@ -621,7 +621,7 @@ class SqlServerPersistence {
                 query += " WHERE " + filter;
             }
             let pos = Math.trunc(Math.random() * count);
-            query += " OFFSET " + pos + " LIMIT 1";
+            query += " ORDER BY (SELECT NULL) OFFSET " + pos + " ROWS FETCH NEXT 1 ROWS ONLY";
             let item = yield new Promise((resolve, reject) => {
                 this._client.query(query, (err, result) => {
                     if (err != null) {

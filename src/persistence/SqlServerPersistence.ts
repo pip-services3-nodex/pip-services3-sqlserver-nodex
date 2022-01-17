@@ -740,7 +740,7 @@ export class SqlServerPersistence<T> implements IReferenceable, IUnreferenceable
         }
     
         let pos = Math.trunc(Math.random() * count);
-        query += " OFFSET " + pos + " LIMIT 1";
+        query += " ORDER BY (SELECT NULL) OFFSET " + pos + " ROWS FETCH NEXT 1 ROWS ONLY";
 
         let item = await new Promise<any>((resolve, reject) => {
             this._client.query(query, (err, result) => {
