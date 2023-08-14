@@ -150,6 +150,8 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
      */
     getOneById(correlationId, id) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (this.isEmpty(id))
+                return null;
             let query = "SELECT * FROM " + this.quotedTableName() + " WHERE [id]=@1";
             let params = [id];
             let request = this.createRequest(params);
@@ -186,7 +188,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
         }
         // Assign unique id
         let newItem = item;
-        if (newItem.id == null && this._autoGenerateId) {
+        if (this.isEmpty(newItem.id) && this._autoGenerateId) {
             newItem = Object.assign({}, newItem);
             newItem.id = item.id || pip_services3_commons_nodex_1.IdGenerator.nextLong();
         }
@@ -206,7 +208,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
                 return null;
             }
             // Assign unique id
-            if (item.id == null && this._autoGenerateId) {
+            if (this.isEmpty(item.id) && this._autoGenerateId) {
                 item = Object.assign({}, item);
                 item.id = pip_services3_commons_nodex_1.IdGenerator.nextLong();
             }
@@ -267,7 +269,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
      */
     update(correlationId, item) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (item == null || item.id == null) {
+            if (item == null || this.isEmpty(item.id)) {
                 return null;
             }
             let row = this.convertFromPublic(item);
@@ -303,7 +305,7 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
      */
     updatePartially(correlationId, id, data) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (data == null || id == null) {
+            if (data == null || this.isEmpty(id)) {
                 return null;
             }
             let row = this.convertFromPublicPartial(data.getAsObject());
@@ -338,6 +340,8 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
      */
     deleteById(correlationId, id) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (this.isEmpty(id))
+                return null;
             let values = [id];
             let query = "DELETE FROM " + this.quotedTableName() + " OUTPUT DELETED.* WHERE [id]=@1";
             let request = this.createRequest(values);
@@ -380,6 +384,21 @@ class IdentifiableSqlServerPersistence extends SqlServerPersistence_1.SqlServerP
             });
             this._logger.trace(correlationId, "Deleted %d items from %s", count, this._tableName);
         });
+    }
+    /**
+     * Checks if value is empty
+     * @param value any value
+     * @returns true if value empty, other false
+     */
+    isEmpty(value) {
+        const type = typeof value;
+        if (value !== null && type === 'object' || type === 'function') {
+            const props = Object.keys(value);
+            if (props.length === 0) {
+                return true;
+            }
+        }
+        return !value;
     }
 }
 exports.IdentifiableSqlServerPersistence = IdentifiableSqlServerPersistence;
